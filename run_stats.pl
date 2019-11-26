@@ -69,6 +69,15 @@ while(<RUNPARAM>) {
 
 }
 
+# Get cluster density from RunCompletionStatus.xml
+if( -s "$run_folder/RunCompletionStatus.xml" ) {
+    open(STATUS, "$run_folder/RunCompletionStatus.xml");
+    while(<STATUS>) {
+	$data->{ClusterDensity} = inner($_) if /<ClusterDensity>/;
+    }
+}
+    
+
 if( $tocdm ) {
     save_to_cdm($data);
 }
@@ -82,6 +91,14 @@ sub save_to_cdm {
     
     my $client = MongoDB->connect();
     my $RUNS = $client->ns("CMD.runs");
+
+    # Check if run already exists and delete if it does
+    my $results = $RUNS->find_one( {'run_folder'=>$data->{run_folder} } );
+    if( $results and $results->{run_folder} eq $data->{run_folder} ) {
+	$RUNS->delete_one( {'run_folder'=>$data->{run_folder}} );
+    }
+
+    # Insert new data
     $RUNS->insert_one( $data );    
 }
 
@@ -91,3 +108,4 @@ sub inner {
     $s =~ />(.*?)</;
     return $1;
 }
+
