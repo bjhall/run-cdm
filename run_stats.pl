@@ -86,6 +86,22 @@ else {
 }
 
 
+
+sub merge_with_db_data {
+    my $new_data = shift;
+    my $db_data = shift;
+    
+    for my $assay ( keys %{$db_data->{samples}} ) {
+	for my $sid ( keys %{$db_data->{samples}->{$assay}} ) {
+	    unless( defined $new_data->{samples}->{$assay}->{$sid} ) {
+		
+		$new_data->{samples}->{$assay}->{$sid} = $db_data->{samples}->{$assay}->{$sid}
+	    }
+	}
+    }
+}
+
+
 sub save_to_cdm {
     my $data = shift;
     
@@ -96,8 +112,10 @@ sub save_to_cdm {
     my $results = $RUNS->find_one( {'run_folder'=>$data->{run_folder} } );
     if( $results and $results->{run_folder} eq $data->{run_folder} ) {
 	$RUNS->delete_one( {'run_folder'=>$data->{run_folder}} );
+#	print STDERR "MERGING";
+	merge_with_db_data($data, $results);
     }
-
+#    print Dumper($data);
     # Insert new data
     $RUNS->insert_one( $data );    
 }
