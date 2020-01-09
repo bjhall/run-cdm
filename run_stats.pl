@@ -15,14 +15,16 @@ use DateTime qw ( );
 my $SCRIPT_ROOT = dirname($0);
 
 
-my( $samplesheet, $statsjson, $table, $tocdm ) = ("SampleSheet.csv", "Data/Intensities/BaseCalls/Stats/Stats.json", 0, 0);
+my( $samplesheet, $statsjson, $table, $tocdm, $scatter ) = ("SampleSheet.csv", "Data/Intensities/BaseCalls/Stats/Stats.json", 0, 0, 0);
 GetOptions ("samplesheet=s" => \$samplesheet,
-	    "statsjson=s", => \$statsjson,
-	    "table"  => \$table,
-            "cdm"    => \$tocdm);
+	    "statsjson=s"   => \$statsjson,
+	    "scatter"       => \$scatter,
+	    "table"         => \$table,
+            "cdm"           => \$tocdm);
     
 my $run_folder = File::Spec->rel2abs($ARGV[0]);
 my $machine = (split /\//, $run_folder)[-2];
+
 
 
 my $samplesheet_path;
@@ -76,7 +78,26 @@ if( -s "$run_folder/RunCompletionStatus.xml" ) {
 	$data->{ClusterDensity} = inner($_) if /<ClusterDensity>/;
     }
 }
+
+if( $scatter and $machine eq "NovaSeq" ) {
+    require "$ENV{\"LMOD_PKG\"}/init/perl";
+    module("load conda/miniconda3");
+    my @scatter_data = `bash -c 'source activate illumina-interop && interop_imaging_table $run_folder' |cut -d',' -f10,49|uniq`;
+    my %scatter_data;
+    foreach(@scatter_data) {
+	next if /^(#|%)/;
+	chomp;
+	my($pf, $occ ) = split /,/;
+	if(defined $pf and defined $occ) {
+	    push(@{$scatter_data{'pf'}}, $pf);
+	    push(@{$scatter_data{'occ'}}, $occ);
+	}
+    }
+
+    $data->{scatter} = \%scatter_data;
+}
     
+
 
 if( $tocdm ) {
     save_to_cdm($data);
