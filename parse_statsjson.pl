@@ -89,7 +89,7 @@ sub read_samplesheet {
 	if( $data{$d[0]}->{Description} ) {
 	    my @a = split /_/, $data{$d[0]}->{Description};
 	
-	    $data{ $d[0] }->{ID} = $a[1];
+	    $data{ $d[0] }->{ID} = ( $a[1] or $d[0]);
 	    $data{ $d[0] }->{ASSAY} = $a[0];
 	    $data{ $d[0] }->{ORDER} = $i;
 	} else {
